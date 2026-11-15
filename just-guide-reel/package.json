@@ -1,0 +1,19 @@
+{
+  "name": "just-guide-reel",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render JustGuide out/just-guide.mp4 --codec h264 --crf 16",
+    "voice": "python3 voice/build_voice.py"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.300",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.300"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.6.3"
+  }
+}
