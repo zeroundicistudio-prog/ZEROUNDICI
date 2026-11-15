@@ -1,0 +1,75 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Avatar ZEROUNDICI</title>
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body>
+<canvas id="c" width="1920" height="1200"></canvas>
+<script src="avatar.js"></script>
+<script>
+const c = document.getElementById('c'), ctx = c.getContext('2d'), A = ZAvatar;
+function bg() {
+  ctx.fillStyle = '#0b0b0d'; ctx.fillRect(0, 0, 1920, 1200);
+  // stanza "a sezione" come nel format: pavimento spesso + lampada a sospensione
+  ctx.fillStyle = '#1d1d21'; ctx.fillRect(60, 120, 1800, 640);
+  const g = ctx.createRadialGradient(960, 150, 20, 960, 300, 900);
+  g.addColorStop(0, 'rgba(255,240,225,0.22)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(60, 120, 1800, 640);
+  ctx.fillStyle = '#34343a'; ctx.fillRect(40, 760, 1840, 34); ctx.fillRect(40, 100, 1840, 22);
+  ctx.fillStyle = '#26262b'; ctx.fillRect(40, 100, 22, 694); ctx.fillRect(1858, 100, 22, 694);
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(960, 122); ctx.lineTo(960, 170); ctx.stroke();
+  ctx.fillStyle = '#3a3a40'; ctx.beginPath(); ctx.moveTo(940, 170); ctx.lineTo(980, 170); ctx.lineTo(992, 186); ctx.lineTo(928, 186); ctx.fill();
+  ctx.save(); ctx.shadowColor = '#fff'; ctx.shadowBlur = 30; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(960, 190, 9, 0, 7); ctx.fill(); ctx.restore();
+}
+function caption(x, t1, t2) {
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = '800 26px Inter'; ctx.fillText(t1, x, 845);
+  ctx.fillStyle = '#9a9aa2'; ctx.font = '500 20px Inter'; ctx.fillText(t2, x, 876);
+}
+function stool(x) { ctx.strokeStyle = '#6e6458'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x - 32, 690); ctx.lineTo(x + 32, 690); ctx.moveTo(x - 24, 692); ctx.lineTo(x - 30, 760); ctx.moveTo(x + 24, 692); ctx.lineTo(x + 30, 760); ctx.stroke(); }
+function machineTable(x) {
+  ctx.fillStyle = '#d9dade'; ctx.fillRect(x, 620, 220, 12); ctx.fillStyle = '#2f7de1'; ctx.fillRect(x, 620, 26, 12);
+  ctx.fillStyle = '#9a9ca2'; ctx.fillRect(x + 14, 632, 8, 128); ctx.fillRect(x + 196, 632, 8, 128);
+  ctx.fillStyle = '#e9eaec'; ctx.fillRect(x + 70, 586, 110, 34); ctx.fillRect(x + 150, 540, 30, 60); ctx.fillRect(x + 66, 540, 114, 24); ctx.fillRect(x + 62, 540, 28, 66);
+  ctx.fillStyle = '#2f7de1'; ctx.fillRect(x + 92, 548, 56, 6);
+  ctx.fillStyle = '#cdbb98'; ctx.fillRect(x + 30, 614, 100, 6);
+}
+function render() {
+  bg();
+  const FL = 760;
+  // 1 sarto in piedi
+  A.drawAvatar(ctx, {x: 230, y: FL, dir: 1, tone: 'light', face: 'neutral', label: 'SARTO', extras: {tape: true}});
+  caption(230, 'Sarto', 'tono chiaro · metro rosso');
+  // 2 sarto che cuce
+  stool(470); 
+  A.drawAvatar(ctx, {x: 470, y: FL, dir: 1, tone: 'light', face: 'focus', label: 'SARTO', extras: {tape: true},
+    pose: {hipY: 0.205, lean: 0.22, legF: [0.2, 0.28], legB: [0.16, 0.29], armF: [0.2, 0.17], armB: [0.16, 0.19]}});
+  machineTable(500);
+  caption(560, 'Sarto al lavoro', 'seduto · concentrato');
+  // 3 cliente grigio in piedi
+  A.drawAvatar(ctx, {x: 860, y: FL, dir: -1, tone: 'grey', face: 'neutral', label: 'CLIENTE', extras: {hair: true}});
+  caption(860, 'Cliente – prima', 'tono grigio · capelli fatti');
+  // 4 cliente che cammina
+  A.drawAvatar(ctx, {x: 1080, y: FL, dir: 1, tone: 'grey', face: 'neutral', extras: {hair: true}, pose: A.walk(1.1)});
+  caption(1080, 'Camminata', 'arti a tubo morbido');
+  // 5 cliente dopo: outfit, illuminato, felice, busta
+  A.drawAvatar(ctx, {x: 1330, y: FL, dir: -1, tone: 'light', face: 'happy', label: 'CLIENTE', extras: {hair: true, outfit: true, bag: true},
+    pose: {armF: [0.1, 0.33]}});
+  caption(1330, 'Cliente – dopo', 'outfit · si illumina');
+  // 6 figura di sfondo (piani spenti)
+  A.drawAvatar(ctx, {x: 1560, y: FL, dir: -1, tone: 'dark', face: 'none', pose: A.walk(2.4, 0.6)});
+  A.drawAvatar(ctx, {x: 1700, y: FL, dir: 1, tone: 'dark', face: 'none'});
+  caption(1630, 'Comparse', 'stanze spente');
+  // riga espressioni
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = '800 26px Inter'; ctx.fillText('ESPRESSIONI', 80, 960);
+  const moods = [['neutral', 'neutro'], ['focus', 'concentrato'], ['surprised', 'sorpreso'], ['happy', 'felice'], ['proud', 'soddisfatto']];
+  moods.forEach(([m, n], i) => {
+    const x = 420 + i * 300;
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 130, 940, 260, 190); ctx.clip();
+    const sp = ctx.createRadialGradient(x, 1030, 10, x, 1030, 140); sp.addColorStop(0, '#2a2a30'); sp.addColorStop(1, '#0b0b0d');
+    ctx.fillStyle = sp; ctx.fillRect(x - 130, 940, 260, 190);
+    A.drawAvatar(ctx, {x, y: 1550, s: 1.6, dir: 1, tone: 'light', face: m, noShadow: true, extras: {hair: i > 2}});
+    ctx.restore();
+    ctx.textAlign = 'center'; ctx.fillStyle = '#9a9aa2'; ctx.font = '600 22px Inter'; ctx.fillText(n, x, 1165);
+  });
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = '800 34px Inter'; ctx.fillText('AVATAR ZEROUNDICI', 62, 70);
+  ctx.fillStyle = '#D3161E'; ctx.font = '700 22px Inter'; ctx.fillText('scheda personaggi · v1', 430, 70);
+}
+document.fonts.load('800 26px Inter').then(() => { render(); window.done = true; });
+</script></body></html>
