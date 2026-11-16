@@ -17,6 +17,23 @@
     dark: {base: '#2c2c31', hi: '#4a4a52', lo: '#151518', line: '#000'}
   };
   const lerp = (a, b, k) => a + (b - a) * k;
+  function mixHex(a, b, k) {
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    const ch = sh => Math.round(lerp((pa >> sh) & 255, (pb >> sh) & 255, k));
+    return '#' + ((1 << 24) + (ch(16) << 16) + (ch(8) << 8) + ch(0)).toString(16).slice(1);
+  }
+  function mixTone(A, B, k) { const o = {}; for (const key in A) o[key] = mixHex(A[key], B[key], k); return o; }
+  // geometria condivisa: dove stanno anca e spalla per una data posa
+  function skeleton(o) {
+    const s = o.s || 1, dir = o.dir || 1, U = 360 * s;
+    const P = Object.assign({hipY: 0, lean: 0}, o.pose || {});
+    const hip = [o.x, o.y - 0.52 * U * 0.985 + P.hipY * U];
+    const sh = [hip[0] + Math.sin(P.lean) * 0.25 * U * dir, hip[1] - Math.cos(P.lean) * 0.25 * U];
+    return {U, dir, hip, sh};
+  }
+  // posa del braccio per portare la mano in un punto del mondo
+  function reach(o, wx, wy) { const k = skeleton(o); return [(wx - k.sh[0]) / k.U * k.dir, (wy - k.sh[1]) / k.U]; }
+  function reachLeg(o, wx, wy) { const k = skeleton(o); return [(wx - k.hip[0]) / k.U * k.dir, (wy - k.hip[1]) / k.U]; }
 
   // curva "rubber hose": dati radice, estremità e lunghezza dell'arto,
   // calcola il punto di controllo così che il tubo si pieghi in modo morbido
@@ -59,7 +76,8 @@
      extras: {tape, hair, outfit, bag}
   */
   function drawAvatar(ctx, o) {
-    const s = o.s || 1, dir = o.dir || 1, T = TONES[o.tone || 'light'];
+    const s = o.s || 1, dir = o.dir || 1;
+    const T = o.toneK != null ? mixTone(TONES.grey, TONES.light, o.toneK) : TONES[o.tone || 'light'];
     const U = 360 * s;                         // altezza di riferimento
     const W = 15 * s;                          // spessore arti
     const P = Object.assign({hipY: 0, lean: 0, armF: [0.07, 0.36], armB: [-0.05, 0.36], legF: [0.03, 0.512], legB: [-0.03, 0.512]}, o.pose || {});
@@ -154,26 +172,34 @@
   function face(ctx, head, r, dir, mood, T, s) {
     if (mood === 'none') return;
     const cx = head[0] + dir * r * 0.42, cy = head[1] + r * 0.02;
-    const eye = (x, y, sq) => {
-      ctx.fillStyle = T.line; ctx.beginPath(); ctx.ellipse(x, y, r * 0.085, r * 0.12 * sq, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(x - r * 0.03, y - r * 0.05 * sq, r * 0.03, 0, 7); ctx.fill();
-    };
     const e1 = [cx - dir * r * 0.2, cy], e2 = [cx + dir * r * 0.22, cy - r * 0.02];
-    const sq = mood === 'happy' || mood === 'proud' ? 0.55 : mood === 'surprised' ? 1.3 : mood === 'focus' ? 0.75 : 1;
-    eye(e1[0], e1[1], sq); eye(e2[0], e2[1], sq);
-    ctx.strokeStyle = T.line; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1.5, r * 0.06);
-    // sopracciglia
-    const by = cy - r * (mood === 'surprised' ? 0.36 : 0.26);
-    const tilt = mood === 'focus' ? 0.09 : mood === 'proud' ? -0.04 : 0;
-    [[e1, -1], [e2, 1]].forEach(([e, side]) => {
-      ctx.beginPath(); ctx.moveTo(e[0] - r * 0.1, by + tilt * r * side * dir); ctx.lineTo(e[0] + r * 0.1, by - tilt * r * side * dir); ctx.stroke();
+    const ink = T.line;
+    ctx.lineCap = 'round';
+    // occhi
+    const closedHappy = mood === 'proud';
+    [e1, e2].forEach(e => {
+      if (closedHappy) { // occhi chiusi sorridenti
+        ctx.strokeStyle = ink; ctx.lineWidth = Math.max(1.6, r * 0.06);
+        ctx.beginPath(); ctx.arc(e[0], e[1] + r * 0.04, r * 0.08, Math.PI + 0.3, -0.3); ctx.stroke(); return;
+      }
+      const sq = mood === 'focus' ? 0.72 : mood === 'surprised' ? 1.25 : 1;
+      const lookDown = mood === 'focus' ? r * 0.05 : 0;
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(e[0], e[1] + lookDown, r * 0.085, r * 0.12 * sq, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(e[0] - r * 0.03, e[1] + lookDown - r * 0.05 * sq, r * 0.03, 0, 7); ctx.fill();
+    });
+    // sopracciglia morbide, leggermente arcuate verso l'alto (mai aggrottate)
+    ctx.strokeStyle = ink; ctx.lineWidth = Math.max(1.4, r * 0.05);
+    const lift = mood === 'surprised' ? 0.38 : mood === 'happy' || mood === 'proud' ? 0.3 : 0.27;
+    [e1, e2].forEach(e => {
+      ctx.beginPath(); ctx.arc(e[0], e[1] - r * lift + r * 0.12, r * 0.13, Math.PI + 0.75, -0.75); ctx.stroke();
     });
     // bocca
-    const my = cy + r * 0.38, mx = cx + dir * r * 0.02;
+    const my = cy + r * 0.36, mx = cx + dir * r * 0.02;
+    ctx.lineWidth = Math.max(1.6, r * 0.06);
     ctx.beginPath();
-    if (mood === 'happy' || mood === 'proud') ctx.arc(mx, my - r * 0.1, r * 0.17, 0.35, Math.PI - 0.35);
-    else if (mood === 'surprised') { ctx.ellipse(mx, my, r * 0.07, r * 0.1, 0, 0, 7); }
-    else if (mood === 'focus') { ctx.moveTo(mx - r * 0.1, my); ctx.lineTo(mx + r * 0.08, my - r * 0.01); }
+    if (mood === 'happy' || mood === 'proud') ctx.arc(mx, my - r * 0.12, r * 0.18, 0.3, Math.PI - 0.3);
+    else if (mood === 'surprised') ctx.ellipse(mx, my, r * 0.06, r * 0.085, 0, 0, 7);
+    else if (mood === 'focus' || mood === 'calm') ctx.arc(mx, my - r * 0.14, r * 0.13, 0.55, Math.PI - 0.55);
     else { ctx.moveTo(mx - r * 0.09, my); ctx.quadraticCurveTo(mx, my + r * 0.04, mx + r * 0.09, my); }
     ctx.stroke();
   }
@@ -190,5 +216,5 @@
       armB: [0.1 * a * k + 0.02, 0.35]
     };
   }
-  global.ZAvatar = {drawAvatar, walk, TONES};
+  global.ZAvatar = {drawAvatar, walk, TONES, reach, reachLeg, skeleton};
 })(window);

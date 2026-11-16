@@ -1,3 +1,5 @@
 # Materiale privato: non pubblicare finché il repository è pubblico
 knowledge/
 video/stills/
+video/*.wav
+video/*_cues.json
